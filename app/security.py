@@ -84,7 +84,7 @@ secret_box = SecretBox()
 #  ۲) پاک‌سازی اسرار از لاگ و UI  (بخش ۱۹ و ۲۸)
 # ══════════════════════════════════════════════════════════════════
 _SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"\bbot\d{3,}:[A-Za-z0-9_\-]{6,}", re.I),          # توکن eitaayar
+    re.compile(r"\bbot\d+:[A-Za-z0-9_\-]{6,}", re.I),             # توکن eitaayar
     re.compile(r"\b\d{6,}:[A-Za-z0-9_\-]{30,}"),                   # توکن ربات تلگرام
     re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I),  # UUID
     re.compile(r"(?i)\b(token|api[_-]?key|secret|password|session|auth_key)\b\s*[=:]\s*\S+"),
@@ -100,6 +100,19 @@ def redact(text: object) -> str:
     return out
 
 
+def _redact_arg(value: object) -> object:
+    """
+    فقط رشته‌ها پاک‌سازی می‌شوند.
+
+    عدد و بقیهٔ انواع دست‌نخورده می‌مانند، وگرنه قالب‌هایی مثل
+    «%d» و «%f» در پیام‌های کتابخانه‌ها می‌شکنند
+    (TypeError: must be real number, not str).
+    """
+    if isinstance(value, str):
+        return redact(value)
+    return value
+
+
 class RedactingFilter(logging.Filter):
     """فیلتر logging — تضمین می‌کند هیچ رازی وارد فایل لاگ نشود."""
 
@@ -109,9 +122,9 @@ class RedactingFilter(logging.Filter):
                 record.msg = redact(record.msg)
             if record.args:
                 if isinstance(record.args, dict):
-                    record.args = {k: redact(v) for k, v in record.args.items()}
-                else:
-                    record.args = tuple(redact(a) for a in record.args)
+                    record.args = {k: _redact_arg(v) for k, v in record.args.items()}
+                elif isinstance(record.args, tuple):
+                    record.args = tuple(_redact_arg(a) for a in record.args)
         except Exception:  # noqa: BLE001 — لاگ هرگز نباید برنامه را بشکند
             pass
         return True

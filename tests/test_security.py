@@ -126,3 +126,79 @@ class TestRateLimiter:
         assert limiter.allow(1) is True
         assert limiter.allow(2) is True
         assert limiter.allow(1) is False
+
+
+class TestLogFilterDoesNotBreakFormatting:
+    """
+    رگرسیون واقعی: فیلتر نباید آرگومان‌های عددی را به رشته تبدیل کند.
+
+    aiogram پیام‌هایی مثل «bot id = %d» می‌فرستد؛ اگر فیلتر عدد را
+    str کند، logging با TypeError می‌شکند و سیل traceback در ترموکس
+    روی صفحه می‌آید.
+    """
+
+    def _logger(self):
+        import io
+        import logging
+
+        from app.security import RedactingFilter
+
+        stream = io.StringIO()
+        handler = logging.StreamHandler(stream)
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        handler.addFilter(RedactingFilter())
+        log = logging.getLogger(f"regression_{id(stream)}")
+        log.handlers.clear()
+        log.addHandler(handler)
+        log.setLevel(logging.DEBUG)
+        log.propagate = False
+        return log, stream
+
+    def test_percent_d_and_f_survive(self) -> None:
+        log, stream = self._logger()
+        log.warning(
+            "Sleep for %f seconds and try again... (tryings = %d, bot id = %d)",
+            1.4579271754013758,
+            1,
+            7593431038,
+        )
+        out = stream.getvalue()
+        assert "1.457927" in out
+        assert "7593431038" in out
+        assert "TypeError" not in out
+
+    def test_int_args_stay_int(self) -> None:
+        import logging
+
+        from app.security import RedactingFilter
+
+        record = logging.LogRecord(
+            "x", logging.INFO, "f", 1, "id=%d rate=%f", (42, 1.5), None
+        )
+        RedactingFilter().filter(record)
+        assert record.args == (42, 1.5)
+        assert record.getMessage() == "id=42 rate=1.500000"
+
+    def test_dict_args_keep_numeric_types(self) -> None:
+        import logging
+
+        from app.security import RedactingFilter
+
+        record = logging.LogRecord(
+            "x", logging.INFO, "f", 1, "%(n)d %(s)s", {"n": 7, "s": "plain"}, None
+        )
+        RedactingFilter().filter(record)
+        assert record.getMessage() == "7 plain"
+
+    def test_secret_in_string_arg_still_redacted(self) -> None:
+        log, stream = self._logger()
+        log.info("token is %s", "7593431038:AAFMVx0xbi2GmzpldTN30yWokmNUd109XvA")
+        out = stream.getvalue()
+        assert "[REDACTED]" in out
+        assert "AAFMVx0xbi2" not in out
+
+    def test_short_eitaayar_token_redacted(self) -> None:
+        """bot99:... هم باید پاک شود، نه فقط توکن‌های بلند."""
+        from app.security import redact
+
+        assert "[REDACTED]" in redact("bot99:SECRETSECRETSECRETSECRET")

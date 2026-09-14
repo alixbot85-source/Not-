@@ -244,6 +244,12 @@ if [ "$MODE" = "bg" ]; then
         ok "سرویس پل در پس‌زمینه اجرا شد (PID $(cat "$PID_FILE"))."
         say ""
         say "این پنجره را می‌توانید ببندید."
+        if ! command -v termux-wake-lock >/dev/null 2>&1; then
+            say ""
+            warn "termux-wake-lock نصب نیست."
+            say "بدون آن اندروید ممکن است سرویس را در حالت خاموشی صفحه ببندد:"
+            say "${CYN}  pkg install termux-api${OFF}"
+        fi
         say "وضعیت:  bash bridge-setup.sh --status"
         say "لاگ:    bash bridge-setup.sh --log"
         say "توقف:   bash bridge-setup.sh --stop"

@@ -39,12 +39,18 @@ log = logging.getLogger(__name__)
 BRIDGE_HINT = (
     "ورود با شمارهٔ تلفن از طریق سرویس «EitaaBun» انجام می‌شود که یک کلاینت "
     "واقعی MTProto برای ایتا است.\n\n"
-    "راه‌اندازی:\n"
-    "۱) نصب Bun:  curl -fsSL https://bun.sh/install | bash\n"
-    "۲) git clone https://github.com/ghaemifard/EitaaBun\n"
-    "۳) cd EitaaBun && bun install && bun run index.ts\n\n"
-    "سپس در فایل .env مقدار زیر را تنظیم کنید:\n"
+    "راه‌اندازی با یک دستور (در یک پنجرهٔ جدا):\n"
+    "bash bridge-setup.sh\n\n"
+    "سپس در فایل .env پنل:\n"
     "EITAA_BRIDGE_URL=http://127.0.0.1:1234"
+)
+
+BRIDGE_DOWN = (
+    "سرویس پل در حال اجرا نیست.\n\n"
+    "در یک پنجرهٔ ترموکس جدا این را اجرا کنید و باز بگذارید:\n"
+    "cd ~/Not- && bash bridge-setup.sh\n\n"
+    "توجه: Bun روی ترموکس اجرا نمی‌شود (اندروید از bionic استفاده می‌کند، "
+    "نه glibc)؛ این اسکریپت سرویس را روی Node.js بالا می‌آورد."
 )
 
 
@@ -110,11 +116,7 @@ class BridgeClient:
         except EitaaError:
             raise
         except (aiohttp.ClientError, OSError, TimeoutError) as exc:
-            raise EitaaError(
-                "ارتباط با سرویس پل ایتا برقرار نشد. آیا EitaaBun در حال اجراست؟",
-                retryable=True,
-                technical=repr(exc),
-            ) from exc
+            raise EitaaError(BRIDGE_DOWN, retryable=True, technical=repr(exc)) from exc
 
         if not isinstance(data, dict):
             raise EitaaError("پاسخ نامعتبر از سرویس پل.", technical=str(data)[:200])
@@ -143,12 +145,19 @@ async def send_login_code(base_url: str, phone: str) -> dict[str, Any]:
     try:
         data = await client.post("auth/sendCode", {"phone": phone})
         err = BridgeClient.error_of(data)
+        if not err and not data.get("phone_hash"):
+            err = str(data)[:200]
         if err:
+            if "connection" in err.lower():
+                # پل بالاست ولی خودش به سرور ایتا نمی‌رسد
+                raise EitaaError(
+                    "سرویس پل به سرور ایتا وصل نشد.\n\n"
+                    "اتصال اینترنت دستگاه را بررسی کنید. اگر ایتا روی شبکهٔ "
+                    "شما محدود است، از فیلترشکن استفاده کنید.",
+                    retryable=True,
+                    technical=err,
+                )
             raise EitaaError("ارسال کد تأیید انجام نشد.", technical=err)
-        if not data.get("phone_hash"):
-            raise EitaaError(
-                "سرویس پل کد تأیید را تأیید نکرد.", technical=str(data)[:200]
-            )
         return data
     finally:
         await client.close()

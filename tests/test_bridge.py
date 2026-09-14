@@ -323,3 +323,45 @@ class TestErrorExtraction:
     )
     def test_error_of(self, payload, expected) -> None:
         assert BridgeClient.error_of(payload) == expected
+
+
+class TestDiagnosticMessages:
+    """پیام خطا باید بگوید «چطور درستش کنم»، نه فقط «خراب شد»."""
+
+    async def test_bridge_down_tells_user_what_to_run(self) -> None:
+        with pytest.raises(EitaaError) as err:
+            await send_login_code("http://127.0.0.1:9", "+989121234567")
+        msg = err.value.message
+        assert "bridge-setup.sh" in msg
+        assert "Bun" in msg  # توضیح اینکه چرا Bun کار نمی‌کند
+
+    async def test_bridge_up_but_eitaa_unreachable(self, aiohttp_like_bridge) -> None:
+        """
+        حالت واقعی: پل بالاست ولی خودش به ایتا نمی‌رسد.
+        نباید بگوید «پل اجرا نیست» — گمراه‌کننده است.
+        """
+        url = aiohttp_like_bridge
+        with pytest.raises(EitaaError) as err:
+            await send_login_code(url, "+989121234567")
+        msg = err.value.message
+        assert "سرور ایتا" in msg
+        assert "bridge-setup.sh" not in msg
+
+
+@pytest.fixture
+async def aiohttp_like_bridge():
+    """پلی که بالاست ولی به ایتا وصل نمی‌شود — پاسخ واقعی EitaaBun."""
+    async def send_code(request):
+        return web.json_response({"msg": "error in connection"})
+
+    app = web.Application()
+    app.router.add_post("/eitaa/auth/sendCode", send_code)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "127.0.0.1", 0)
+    await site.start()
+    port = runner.addresses[0][1]
+    try:
+        yield f"http://127.0.0.1:{port}"
+    finally:
+        await runner.cleanup()

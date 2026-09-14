@@ -17,6 +17,7 @@ from app.eitaa.eitaayar_backend import (
     eitaapy_available,
     eitaapy_import_error,
 )
+from app.eitaa.bridge_backend import BRIDGE_HINT, BridgeBackend, BridgeClient
 from app.eitaa.extractor import scraper_available, scraper_error
 from app.eitaa.mtproto_backend import (
     INSTALL_HINT,
@@ -42,6 +43,14 @@ async def build_backend(db: Database, account_id: int) -> EitaaBackend:
         if not token:
             raise EitaaError("توکن این اکانت در دسترس نیست. دوباره اکانت را اضافه کنید.")
         return EitaayarBackend(token)
+
+    if account.kind is AccountKind.BRIDGE:
+        if not config.bridge_ready:
+            raise EitaaUnavailable(BRIDGE_HINT)
+        phone = await db.get_account_secret(account_id)
+        if not phone:
+            raise EitaaError("شمارهٔ این اکانت در دسترس نیست. دوباره وارد شوید.")
+        return BridgeBackend(config.bridge_url, phone)
 
     if account.kind is AccountKind.MTPROTO:
         if not mtproto_available():
@@ -95,6 +104,7 @@ def capability_report() -> list[tuple[str, Capability, str]]:
             )
         )
 
+    # نشست کاربری — دو مسیر ممکن: کتابخانهٔ pyeitaa یا سرویس پل EitaaBun
     if mtproto_available():
         rows.append(
             (
@@ -106,10 +116,35 @@ def capability_report() -> list[tuple[str, Capability, str]]:
         rows.append(
             ("گروه‌ها / مخاطبین / چت خصوصی", Capability.AVAILABLE, "messages.GetDialogs")
         )
+    elif config.bridge_ready:
+        rows.append(
+            (
+                "عضویت در گروه‌ها (Joiner)",
+                Capability.AVAILABLE,
+                f"از طریق سرویس پل: {config.bridge_url}",
+            )
+        )
+        rows.append(
+            (
+                "گروه‌ها / مخاطبین / چت خصوصی",
+                Capability.AVAILABLE,
+                "messages/dialogs از سرویس پل",
+            )
+        )
     else:
         reason = (mtproto_error() or "نصب نشده")[:70]
         rows.append(("عضویت در گروه‌ها (Joiner)", Capability.UNAVAILABLE, reason))
         rows.append(("گروه‌ها / مخاطبین / چت خصوصی", Capability.UNAVAILABLE, reason))
+
+    rows.append(
+        (
+            "ورود با شمارهٔ تلفن",
+            Capability.AVAILABLE if config.bridge_ready else Capability.UNAVAILABLE,
+            f"سرویس پل: {config.bridge_url}"
+            if config.bridge_ready
+            else "EITAA_BRIDGE_URL تنظیم نشده است",
+        )
+    )
 
     rows.append(
         (

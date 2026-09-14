@@ -95,16 +95,19 @@ class AccountKind(str, Enum):
     BOT_API : توکن eitaayar.ir از طریق کتابخانهٔ eitaapy — فقط ارسال.
     MTPROTO : نشست کاربری MTProto از طریق فریم‌ورک pyeitaa — Join و Dialogs.
               (وضعیت در دسترس بودن در زمان اجرا بررسی می‌شود؛ هرگز شبیه‌سازی نمی‌شود.)
+    BRIDGE  : نشست کاربری واقعی از طریق سرویس EitaaBun (ورود با شمارهٔ تلفن).
     """
 
     BOT_API = "BOT_API"
     MTPROTO = "MTPROTO"
+    BRIDGE = "BRIDGE"
 
     @property
     def label(self) -> str:
         return {
             AccountKind.BOT_API: "🤖 توکن ایتایار",
             AccountKind.MTPROTO: "👤 نشست کاربری",
+            AccountKind.BRIDGE: "📱 ورود با شماره",
         }[self]
 
 
@@ -186,8 +189,8 @@ class Account:
 
     @property
     def can_join(self) -> bool:
-        """Join فقط با نشست MTProto واقعی ممکن است."""
-        return self.kind is AccountKind.MTPROTO
+        """Join فقط با نشست کاربری واقعی ممکن است، نه با توکن."""
+        return self.kind in {AccountKind.MTPROTO, AccountKind.BRIDGE}
 
     @property
     def can_send(self) -> bool:

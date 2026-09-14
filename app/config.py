@@ -91,6 +91,11 @@ class Config:
         )
     )
 
+    # --- پل MTProto ایتا (اختیاری — سرویس بیرونی EitaaBun) ---
+    bridge_url: str = field(
+        default_factory=lambda: (os.getenv("EITAA_BRIDGE_URL") or "").strip().rstrip("/")
+    )
+
     # --- AI (اختیاری) ---
     ai_enabled: bool = field(default_factory=lambda: _bool("AI_ENABLED", False))
     ai_base_url: str = field(
@@ -115,6 +120,11 @@ class Config:
     def media_dir(self) -> Path:
         """محل نگهداری فایل‌های پیوست‌شده به پیام‌های Sender."""
         return self.data_dir / "media"
+
+    @property
+    def bridge_ready(self) -> bool:
+        """پل فقط وقتی فعال است که آدرسش تنظیم شده باشد."""
+        return bool(self.bridge_url)
 
     @property
     def ai_ready(self) -> bool:

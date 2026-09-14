@@ -133,6 +133,7 @@ def account_detail_menu(account_id: int) -> InlineKeyboardMarkup:
 def account_add_menu() -> InlineKeyboardMarkup:
     return _kb(
         [
+            [_btn("📱 ورود با شمارهٔ تلفن", pack(NS_ACCOUNT, "addphone"))],
             [_btn("🤖 توکن ایتایار", pack(NS_ACCOUNT, "addtok"))],
             [_btn("👤 نشست کاربری (MTProto)", pack(NS_ACCOUNT, "addses"))],
             nav_row(back=pack(NS_ACCOUNT, "list", 1)),

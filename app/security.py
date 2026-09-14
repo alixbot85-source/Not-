@@ -130,6 +130,14 @@ class RedactingFilter(logging.Filter):
         return True
 
 
+def mask_phone(phone: str) -> str:
+    """نمایش امن شمارهٔ تلفن در UI: فقط چهار رقم پایانی."""
+    digits = re.sub(r"\D", "", phone or "")
+    if len(digits) <= 4:
+        return "•" * len(digits) or "—"
+    return "•" * (len(digits) - 4) + digits[-4:]
+
+
 def mask_tail(secret: str, keep: int = 4) -> str:
     """نمایش امن برای UI: فقط چند کاراکتر پایانی."""
     if not secret:

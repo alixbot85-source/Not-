@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Secrets — هرگز commit نشوند
+.env
+*.key
+secret.key
+
+# Runtime data (Session / DB / Log / Export)
+data/
+logs/
+exports/
+*.session
+*.db
+*.sqlite3
+
+# OS
+.DS_Store

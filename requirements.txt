@@ -1,0 +1,26 @@
+# ---- Core (تأییدشده: نصب و ایمپورت موفق در Python 3.11) ----
+aiogram==3.31.0            # Telegram Bot API framework
+aiosqlite==0.22.1          # async SQLite driver
+aiofiles>=23.0             # async file IO
+cryptography>=42.0         # Fernet — رمزنگاری Session/Token در دیتابیس
+
+# ---- Eitaa providers (واقعی؛ سورس آن‌ها بازرسی شده) ----
+eitaapy==1.2.0             # eitaayar.ir token API : get_me / send_message / send_file
+eitaa==2.3.1               # EitaaPyKit : scraping عمومی برای استخراج لینک لینکدونی
+
+# ---- Export ----
+openpyxl==3.1.5            # XLSX
+reportlab>=4.0             # PDF
+arabic-reshaper==3.0.0     # شکل‌دهی حروف فارسی در PDF
+python-bidi>=0.6           # الگوریتم BiDi برای RTL
+
+# ---- Tests ----
+pytest>=8.0
+pytest-asyncio>=0.23
+
+# ---- اختیاری / نصب دستی ----------------------------------------------------
+# Joiner واقعی ایتا به فریم‌ورک MTProto «pyeitaa» (اثر MSDanesh، Layer 135) نیاز دارد.
+# این پکیج روی PyPI قابل نصب نیست و upstream آن حذف شده است؛ پس عمداً اینجا pin نشده.
+# جزئیات کامل و وضعیت واقعی: docs/AUDIT.md §2.4
+# تا زمانی که نصب نشود، قابلیت‌های Join/Dialogs/Contacts با وضعیت UNAVAILABLE
+# گزارش می‌شوند و هرگز شبیه‌سازی (Fake) نمی‌شوند.

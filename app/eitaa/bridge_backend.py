@@ -39,18 +39,18 @@ log = logging.getLogger(__name__)
 BRIDGE_HINT = (
     "ورود با شمارهٔ تلفن از طریق سرویس «EitaaBun» انجام می‌شود که یک کلاینت "
     "واقعی MTProto برای ایتا است.\n\n"
-    "راه‌اندازی با یک دستور (در یک پنجرهٔ جدا):\n"
-    "bash bridge-setup.sh\n\n"
+    "راه‌اندازی با یک دستور:\n"
+    "bash bridge-setup.sh --bg\n\n"
     "سپس در فایل .env پنل:\n"
     "EITAA_BRIDGE_URL=http://127.0.0.1:1234"
 )
 
 BRIDGE_DOWN = (
     "سرویس پل در حال اجرا نیست.\n\n"
-    "در یک پنجرهٔ ترموکس جدا این را اجرا کنید و باز بگذارید:\n"
-    "cd ~/Not- && bash bridge-setup.sh\n\n"
-    "توجه: Bun روی ترموکس اجرا نمی‌شود (اندروید از bionic استفاده می‌کند، "
-    "نه glibc)؛ این اسکریپت سرویس را روی Node.js بالا می‌آورد."
+    "این را اجرا کنید (در پس‌زمینه می‌ماند و پنجره را می‌توانید ببندید):\n"
+    "cd ~/Not- && bash bridge-setup.sh --bg\n\n"
+    "بررسی وضعیت:  bash bridge-setup.sh --status\n"
+    "دیدن خطاها:   bash bridge-setup.sh --log"
 )
 
 

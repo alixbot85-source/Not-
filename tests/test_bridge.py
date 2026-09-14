@@ -332,8 +332,10 @@ class TestDiagnosticMessages:
         with pytest.raises(EitaaError) as err:
             await send_login_code("http://127.0.0.1:9", "+989121234567")
         msg = err.value.message
-        assert "bridge-setup.sh" in msg
-        assert "Bun" in msg  # توضیح اینکه چرا Bun کار نمی‌کند
+        # باید دستور دقیق اجرا را بدهد، نه فقط بگوید «خراب است»
+        assert "bridge-setup.sh --bg" in msg
+        # و راه دیدن علت واقعی خرابی را نشان دهد
+        assert "--log" in msg or "--status" in msg
 
     async def test_bridge_up_but_eitaa_unreachable(self, aiohttp_like_bridge) -> None:
         """

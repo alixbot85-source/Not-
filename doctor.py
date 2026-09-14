@@ -232,7 +232,8 @@ async def main() -> int:  # noqa: C901 - خطی و خوانا
         else:
             bad(
                 f"سرویس پل پاسخ نمی‌دهد: {config.bridge_url}",
-                "در یک پنجرهٔ جدا:  bash bridge-setup.sh",
+                "اجرا در پس‌زمینه:  bash bridge-setup.sh --bg\n"
+                "دیدن خطا:         bash bridge-setup.sh --log",
             )
             problems += 1
         await client.close()

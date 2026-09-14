@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import asyncio
+import subprocess
 import sys
 from pathlib import Path
 
@@ -128,8 +129,40 @@ async def main() -> int:  # noqa: C901 - خطی و خوانا
     # ── ۵. نمونهٔ همزمان ────────────────────────────────────
     head("۵. اجرای همزمان")
     try:
-        updates = await bot.get_updates(limit=1, timeout=0)
+        updates = await bot.get_updates(limit=100, timeout=0)
         ok(f"getUpdates کار می‌کند ({len(updates)} آپدیت در صف)")
+
+        # مهم‌ترین بررسی: آیا فرستندهٔ واقعی پیام‌ها جزو ادمین‌هاست؟
+        senders: dict[int, str] = {}
+        for upd in updates:
+            src = upd.message or upd.callback_query
+            frm = getattr(src, "from_user", None)
+            if frm:
+                senders[frm.id] = frm.username or frm.full_name or "?"
+
+        if senders:
+            print()
+            for uid, uname in senders.items():
+                if uid in config.admin_ids:
+                    ok(f"پیام از {uid} (@{uname}) — این آیدی ادمین است ✔")
+                else:
+                    bad(
+                        f"پیام از {uid} (@{uname}) — این آیدی ادمین نیست!",
+                        "ربات به این آیدی فقط «دسترسی مجاز نیست» می‌دهد.\n"
+                        "این خط را در .env بگذارید:\n"
+                        f"  ADMIN_IDS={uid}\n"
+                        "سپس ربات را دوباره اجرا کنید.",
+                    )
+                    problems += 1
+        elif updates:
+            warn("آپدیت‌ها فرستندهٔ قابل تشخیص ندارند")
+        else:
+            warn(
+                "هیچ پیامی در صف نیست. اگر ربات جواب نمی‌دهد، اول در تلگرام\n"
+                "   به @"
+                + (me.username or "?")
+                + " یک /start بفرستید، بعد دوباره این ابزار را اجرا کنید."
+            )
     except Exception as exc:  # noqa: BLE001
         msg = str(exc)
         if "terminated by other getUpdates" in msg or "Conflict" in msg:
@@ -146,8 +179,48 @@ async def main() -> int:  # noqa: C901 - خطی و خوانا
 
     await bot.session.close()
 
-    # ── ۶. سرویس پل ─────────────────────────────────────────
-    head("۶. سرویس پل ایتا (اختیاری)")
+    # ── ۵.۵ آیا خود ربات اصلاً در حال اجراست؟ ───────────────
+    head("۶. اجرا بودن ربات")
+    try:
+        out = subprocess.run(
+            ["pgrep", "-af", "run.py"], capture_output=True, text=True, timeout=5
+        ).stdout.strip()
+    except Exception:  # noqa: BLE001
+        out = ""
+    mine = [ln for ln in out.splitlines() if "doctor" not in ln]
+    if mine:
+        ok(f"ربات در حال اجراست ({len(mine)} نمونه)")
+        for ln in mine:
+            print(f"   {ln}")
+        if len(mine) > 1:
+            bad(
+                "بیش از یک نمونه اجراست — با هم تداخل دارند!",
+                "همه را ببندید:  pkill -f 'python run.py'",
+            )
+            problems += 1
+    else:
+        bad(
+            "ربات در حال اجرا نیست!",
+            "هیچ پردازش run.py پیدا نشد. یعنی چیزی پیام‌ها را نمی‌خواند.\n"
+            "در یک پنجرهٔ جدا اجرا کنید و خروجی را ببینید:\n"
+            "  cd ~/Not- && python run.py\n"
+            "اگر بلافاصله بسته شد، متن خطا را بفرستید.",
+        )
+        problems += 1
+
+    # ── ۶.۵ آخرین خطاهای ثبت‌شده ────────────────────────────
+    head("۷. آخرین خطاها در لاگ")
+    err_log = Path("logs/error.log")
+    if err_log.exists() and err_log.stat().st_size:
+        lines = err_log.read_text(encoding="utf-8", errors="replace").splitlines()
+        warn(f"{err_log} — {len(lines)} خط. ۱۵ خط آخر:")
+        for ln in lines[-15:]:
+            print(f"   {ln[:160]}")
+    else:
+        ok("خطای ثبت‌شده‌ای وجود ندارد")
+
+    # ── ۸. سرویس پل ─────────────────────────────────────────
+    head("۸. سرویس پل ایتا (اختیاری)")
     if not config.bridge_ready:
         warn("EITAA_BRIDGE_URL تنظیم نشده — «ورود با شماره» غیرفعال است")
     else:

@@ -18,6 +18,7 @@ from aiogram.exceptions import (
     TelegramNetworkError,
     TelegramUnauthorizedError,
 )
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import BotCommand
 
@@ -111,7 +112,14 @@ async def main() -> int:
     if recovered:
         log.warning("عملیات‌های بازیابی‌شده پس از راه‌اندازی مجدد: %s", recovered)
 
+    session = AiohttpSession(proxy=config.proxy_url) if config.proxy_url else None
+    if config.proxy_url:
+        log.info("اتصال از طریق پراکسی: %s", config.proxy_url)
     bot = Bot(
+        token=config.bot_token,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+        session=session,
+    ) if session else Bot(
         token=config.bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
@@ -138,6 +146,15 @@ async def main() -> int:
                 "   (در صورت نیاز از پراکسی استفاده کنید.)\n"
             )
             return 1
+
+        # وب‌هوک باید خاموش باشد وگرنه polling هیچ آپدیتی نمی‌گیرد
+        try:
+            hook = await bot.get_webhook_info()
+            if hook.url:
+                log.warning("وب‌هوک فعال بود و حذف شد: %s", hook.url)
+                await bot.delete_webhook(drop_pending_updates=False)
+        except TelegramAPIError as exc:
+            log.warning("بررسی وب‌هوک ناموفق بود: %s", exc)
 
         try:
             await bot.set_my_commands(COMMANDS)

@@ -91,6 +91,11 @@ class Config:
         )
     )
 
+    # --- پراکسی برای دسترسی به api.telegram.org (اختیاری) ---
+    proxy_url: str = field(
+        default_factory=lambda: (os.getenv("TELEGRAM_PROXY") or "").strip()
+    )
+
     # --- پل MTProto ایتا (اختیاری — سرویس بیرونی EitaaBun) ---
     bridge_url: str = field(
         default_factory=lambda: (os.getenv("EITAA_BRIDGE_URL") or "").strip().rstrip("/")
